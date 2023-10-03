@@ -67,7 +67,8 @@ def listGames():
 def selectGame():
     data = request.get_json()
     print('selected room', data)
-    return redirect(url_for('game', route=str(data)), code=302)
+    # return redirect(url_for('game', route=str(data)), code=302)
+    return {'url': 'game/'+str(data)}
 
 
 @app.route("/bet", methods=["POST"])

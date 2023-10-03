@@ -23,8 +23,18 @@
             console.log('selection', roomNumber)
             let xhr = new XMLHttpRequest();
             xhr.open("POST", '/selectGame', true);
+            xhr.onreadystatechange = () => {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    redirect(xhr.responseText)
+                }
+            }
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.send(roomNumber);
+        }
+
+        redirect = data => {
+            data = JSON.parse(data)
+            window.location.href = `../${data.url}`
         }
 
         socket.on('get_games_list', (data) => {
