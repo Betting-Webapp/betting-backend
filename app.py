@@ -8,23 +8,23 @@ import json
 import os
 # import marketplace
 
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, join_room, close_room #, rooms, leave_room
 
-# mydb = mysql.connector.connect(
-#     user="Nishad", 
-#     password="Game@1998",
-#     host="betting-game.mysql.database.azure.com",
-#     port=3306,
-#     database="bettinggame", 
-#     ssl_ca="DigiCertGlobalRootCA.crt.pem", 
-#     ssl_disabled=False
-#     )
+mydb = mysql.connector.connect(
+    user="Nishad", 
+    password="Game@1998",
+    host="betting-game.mysql.database.azure.com",
+    port=3306,
+    database="bettinggame", 
+    ssl_ca="DigiCertGlobalRootCA.crt.pem", 
+    ssl_disabled=False
+    )
 
 app = Flask(__name__)
 socketio = SocketIO(app)
 
 route_users = {}
-game_bets = []
+game_bets = {}
 
 @app.route("/")
 def index():
@@ -58,6 +58,17 @@ def login():
         loginPlayer(mydb, request)
         return render_template("index.html")
 
+@socketio.on('listGames')
+def listGames():
+    gameRooms = { roomNumber: len(route_users[roomNumber]) for roomNumber in route_users }
+    emit('get_games_list', { 'rooms': gameRooms, 'user': request.sid }, broadcast=False)
+
+@app.route("/selectGame", methods = ["POST"])
+def selectGame():
+    data = request.get_json()
+    print('selected room', data)
+    return redirect(url_for('game', route=str(data)), code=302)
+
 
 @app.route("/bet", methods=["POST"])
 def bet():
@@ -72,15 +83,15 @@ def bet():
 
         return render_template("result.html", user_bet=user_bet, result=result, coin_toss_result=coin_toss_result)
     
-@app.route("/makeBets", methods=["GET", "POST"])
-def makeBets():
+@app.route('/makeBets/<route>', methods=["GET", "POST"])
+def makeBets(route):
     if request.method == "POST":
         emailAddress = request.form.get("email")
         password = request.form.get("password")
 
         print(emailAddress, password)
         game_bets.append((emailAddress, password))
-        print('game bets', game_bets)
+        print(route, 'game bets', game_bets)
         # user_bet = request.form["bet"]
         # coin_toss_result = random.choice(["heads", "tails"])
 
@@ -93,26 +104,41 @@ def makeBets():
     print("~~~~~~ MAKE YOUR BETS ~~~~~~~")
     return render_template("makeBets.html")
 
+@app.route('/winner', methods=["GET"])
+def winner():
+    return render_template("winner.html")
+
+@app.route('/loser', methods=["GET"])
+def loser():
+    return render_template("loser.html")
+
 @socketio.on('determine_winner')
 def determine_winner():
     route = request.args.get('route')
 
 @socketio.on('connect')
 def handle_connect():
-    print('In Connect')
-    print('request.args', request.args)
-    print('request.view_args', request.view_args)
     route = request.args.get('route')
+    print('Connected, args route = ', route)
+
+@socketio.on('join')
+def join(route_info):
+    r = request.args.get('route')
+    print('args route', r)
+    route = route_info['route']
     if route not in route_users:
         route_users[route] = []
 
     if len(route_users[route]) < 3:
         route_users[route].append(request.sid)
         print(route_users)
-        emit('message', {'data': 'Connected', 'count': len(route_users[route])}, room=route)
+        join_room(route)
+        emit('message', {'data': 'Connected', 'count': len(route_users[route])}, room=r)
+        print('route', route, 'num users', route_users[route])
         if len(route_users[route]) == 3:
-            emit('start_game', broadcast=True, room=route)
-            return redirect(url_for('login'))
+            print('here')
+            emit('start_game', {'route': route}, broadcast=True, room=route)
+            # return redirect(url_for('login'))
     else:
         emit('message', {'data': 'Room full. Cannot join.'})
 
@@ -129,6 +155,23 @@ def handle_disconnect():
 def handle_message(data):
     route = request.args.get('route')
     emit('chat_message', {'data': data['data'], 'user': request.sid}, broadcast=True, room=route)
+
+@socketio.on('place_bets')
+def place_bets(data):
+    if data['route'] not in game_bets:
+        game_bets[data['route']] = []
+    
+    game_bets[data['route']].append((request.sid, data['bet']))
+
+    if len(game_bets[data['route']]) == 3:
+        sorted_bets = sorted(game_bets[data['route']], key=lambda k: k[1], reverse=True)
+        winner = sorted_bets[0][0]
+        emit('results_win', to=winner)
+        emit('results_lose', to=[sb[0] for sb in sorted_bets[1:]])
+        # for sb in sorted_bets:
+        #     leave_room(data['route'], sid=sb[0])
+        close_room(data['route'])
+    
 
 
 if __name__ == '__main__':
