@@ -9,6 +9,8 @@ from PIL import Image
 import json
 import os
 import ast
+import uuid
+import random
 # import marketplace
 
 from flask_socketio import SocketIO, emit, join_room, close_room #, rooms, leave_room
@@ -128,9 +130,45 @@ def join(route_info):
     else:
         emit('message', {'data': 'Room full. Cannot join.'})
 
-@app.route("/createGame", methods = ["GET", "POST"])
-def createGame():
-    return createGameHandler(mydb, request)
+# @app.route("/createGame", methods = ["GET", "POST"])
+@socketio.on('createGame')
+def createGame(data):
+    # return createGameHandler(mydb, request)
+
+    if 'uuid' not in data or not data['uuid']:
+        response_data = {
+            'route': 'login',
+            'status': 302
+        }
+        emit('redirect-to-login', response_data, broadcast=False)
+    
+    else:
+        # if request.method == "GET":
+        #     response_data = {
+        #         'route': 'createGame',
+        #         'uuid': data['uuid'],
+        #         'status': 302
+        #     }
+        #     return jsonify(response_data), 302
+
+        game_uuid = uuid.uuid4()
+        numPlayers = data['numPlayers']
+        playerList = str([data['uuid']])
+
+        mycursor = mydb.cursor()
+        sql = "INSERT INTO gamesIds (gameuuid, playerlist, totalplayers, is_active) VALUES (%s, %s, %s, %s)"
+        values = (str(game_uuid), playerList, numPlayers, True)
+        mycursor.execute(sql, values)
+        mydb.commit()
+
+        response_data = {
+            'route': 'game/'+str(game_uuid),
+            'uuid': data['uuid'],
+            'game_uuid': game_uuid,
+            'status': 302
+        }
+        join_room(game_uuid)
+        emit('lobby', response_data, broadcast=False)
 
 @socketio.on('listGames')
 def listGames(data):
@@ -169,9 +207,10 @@ def listGames(data):
     # gameRooms = { roomNumber: len(route_users[roomNumber]) for roomNumber in route_users }
     # emit('get_games_list', { 'rooms': gameRooms, 'user': request.sid }, broadcast=False)
 
-@app.route("/selectGame", methods = ["POST"])
-def selectGame():
-    data = request.get_json()
+# @app.route("/selectGame", methods = ["POST"])
+@socketio.on("selectGame")
+def selectGame(data):
+    # data = request.get_json()
     # print('selected room', data)
 
     if 'uuid' not in data or not data['uuid']:
@@ -179,54 +218,61 @@ def selectGame():
                 'route': 'login',
                 'status': 302
             }
-        return (response_data), 302
+        # return (response_data), 302
+        emit('redirect-to-login', response_data, broadcast=False)
 
-    game_uuid = data['game_uuid']
+    else:
+        game_uuid = data['game_uuid']
 
-
-    mycursor = mydb.cursor()
-    mycursor.execute("SELECT * FROM gamesIds WHERE gameuuid = "+str(game_uuid)+";")
-    myresult = mycursor.fetchall()
-
-    totalPlayers = myresult[0][2]
-    currentPlayers = len(myresult[0][1]) + 1
-
-    if myresult[0][3]:
         mycursor = mydb.cursor()
-        
-        playersList = ast.literal_eval(myresult[0][1])
-        playersList.append(data['uuid'])
-        playersList = str(playersList)
+        mycursor.execute("SELECT * FROM gamesIds WHERE gameuuid = "+str(game_uuid)+";")
+        myresult = mycursor.fetchall()
 
-        sql1 = "UPDATE gamesIds SET playerlist = %s WHERE gameuuid = %s"
-        val1 = (playersList, game_uuid)
+        totalPlayers = myresult[0][2]
+        currentPlayers = len(myresult[0][1]) + 1
 
-        mycursor.execute(sql1, val1)
-        mydb.commit()
+        if myresult[0][3]:
+            mycursor = mydb.cursor()
+            
+            playersList = ast.literal_eval(myresult[0][1])
+            playersList.append(data['uuid'])
+            playersList = str(playersList)
+            join_room(game_uuid)
 
-        if totalPlayers == currentPlayers:
-            sql2 = "UPDATE gamesIds SET is_active = %s WHERE gameuuid = %s"
-            val2 = (False, game_uuid)
-            mycursor.execute(sql2, val2)
+            sql1 = "UPDATE gamesIds SET playerlist = %s WHERE gameuuid = %s"
+            val1 = (playersList, game_uuid)
+
+            mycursor.execute(sql1, val1)
             mydb.commit()
-        
-        response_data = {
+
+            response_data = {
+                'uuid': data['uuid'],
+                'game_uuid': game_uuid,
+                'route': 'game/'+str(game_uuid),
+                'status': 302
+            }
+
+            if totalPlayers == currentPlayers:
+                sql2 = "UPDATE gamesIds SET is_active = %s WHERE gameuuid = %s"
+                val2 = (False, game_uuid)
+                mycursor.execute(sql2, val2)
+                mydb.commit()
+                emit('start-game', response_data, room=game_uuid, broadcast=True)
+            
+            # return jsonify(response_data), 302
+            emit('lobby', response_data, broadcast=False)
+
+        else:
+            response_data = {
             'uuid': data['uuid'],
-            'game_uuid': game_uuid,
-            'route': 'game/'+str(game_uuid),
-            'status': 302
-        }
-        return jsonify(response_data), 302
+            'refresh': True,
+            'status': 402
+            }
+            # return jsonify(response_data), 402
+            emit('refresh', response_data, broadcast=False)
 
-    response_data = {
-        'uuid': data['uuid'],
-        'refresh': True,
-        'status': 402
-    }
-    return jsonify(response_data), 402
-
-    # return redirect(url_for('game', route=str(data)), code=302)
-    # return {'url': 'game/'+str(data)}
+            # return redirect(url_for('game', route=str(data)), code=302)
+            # return {'url': 'game/'+str(data)}
 
 
 @socketio.on('disconnect')
