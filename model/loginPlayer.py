@@ -1,20 +1,39 @@
-from flask import Blueprint, render_template, redirect, url_for
+from flask import Blueprint, render_template, redirect, url_for, jsonify
 
 def loginPlayer(mydb, request):
     if request.method == "POST":
-        emailAddress = request.form.get("email")
-        password = request.form.get("password")
+        data = request.get_json()
+        if 'uuid' in data and data['uuid']:
+            response_data = {
+                'route': 'game-list',
+                'uuid': data['uuid'],
+                'status': 302
+            }
+            return jsonify(response_data), 302
+        emailAddress = data['emailAddress']
+        password = data["password"]
         mycursor = mydb.cursor()
-        mycursor.execute("SELECT * FROM userDetails where email_id ='" + str(emailAddress) + "'")
+        mycursor.execute("SELECT * FROM userDetails where email_id ='" + str(emailAddress) + "' and password = '" + str(password) + "';")
         myresult = mycursor.fetchall()
+        print(myresult)
 
         if myresult == []:
-            return render_template("loginDetails.html")
-        if myresult[0][3] == password:
-            global currentEmail
-            currentEmail = emailAddress
-            return redirect(url_for("auth.get_products"))
+            response_data = {
+                'route': 'login',
+                'status': 302
+            }
+            return jsonify(response_data), 302
         else:
-            return render_template("loginDetails.html")
+            response_data = {
+                'route': 'game-list',
+                'uuid': myresult[0][0],
+                'status': 302
+            }
+            return jsonify(response_data), 302
+
     else:
-        return render_template("loginDetails.html")
+        response_data = {
+            'route': 'login',
+            'status': 302
+        }
+        return jsonify(response_data), 302

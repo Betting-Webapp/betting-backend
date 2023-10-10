@@ -1,11 +1,14 @@
-from flask import Blueprint, render_template, request, flash, redirect, url_for, Flask
+from flask import Blueprint, render_template, request, flash, redirect, url_for, Flask, jsonify
+from flask_cors import CORS, cross_origin
 from model.registerPlayer import registerPlayer
 from model.loginPlayer import loginPlayer
+from model.createGameHandler import createGameHandler
 import mysql.connector
 from datetime import datetime
 from PIL import Image
 import json
 import os
+import ast
 # import marketplace
 
 from flask_socketio import SocketIO, emit, join_room, close_room #, rooms, leave_room
@@ -22,54 +25,36 @@ mydb = mysql.connector.connect(
 
 app = Flask(__name__)
 socketio = SocketIO(app)
+CORS(app, resources={r"/": {"origins": ""}})
 
 route_users = {}
 game_bets = {}
 
 @app.route("/")
+@cross_origin()
 def index():
-    return render_template("index.html")
+    return loginPlayer(mydb, request)
 
 @app.route('/game/<route>')
 def game(route):
     return render_template('game.html', route=route)
 
-@app.route('/test',  methods = ["GET", "POST"])
-def test():
-    if request.method == "GET":
-        return render_template("test.html")
-    else:
-        return redirect(url_for('game', route=1))
+# @app.route('/test',  methods = ["GET", "POST"])
+# def test():
+#     if request.method == "GET":
+#         return render_template("test.html")
+#     else:
+#         return redirect(url_for('game', route=1))
 
 @app.route("/registerPlayer",  methods = ["GET", "POST"])
+@cross_origin()
 def register():
-    if request.method == "GET":
-        return render_template("registerDetails.html")
-    else:
-        print("Hello")
-        registerPlayer(mydb, request)
-        return render_template("index.html")
+    return registerPlayer(mydb, request)
     
 @app.route("/loginPlayer",  methods = ["GET", "POST"])
+@cross_origin()
 def login():
-    if request.method == "GET":
-        return render_template("loginDetails.html")
-    else:
-        loginPlayer(mydb, request)
-        return render_template("index.html")
-
-@socketio.on('listGames')
-def listGames():
-    gameRooms = { roomNumber: len(route_users[roomNumber]) for roomNumber in route_users }
-    emit('get_games_list', { 'rooms': gameRooms, 'user': request.sid }, broadcast=False)
-
-@app.route("/selectGame", methods = ["POST"])
-def selectGame():
-    data = request.get_json()
-    print('selected room', data)
-    # return redirect(url_for('game', route=str(data)), code=302)
-    return {'url': 'game/'+str(data)}
-
+    return loginPlayer(mydb, request)
 
 @app.route("/bet", methods=["POST"])
 def bet():
@@ -142,6 +127,106 @@ def join(route_info):
             # return redirect(url_for('login'))
     else:
         emit('message', {'data': 'Room full. Cannot join.'})
+
+@app.route("/createGame", methods = ["GET", "POST"])
+def createGame():
+    return createGameHandler(mydb, request)
+
+@socketio.on('listGames')
+def listGames(data):
+
+    if 'uuid' not in data or not data['uuid']:
+        # response_data = {
+        #         'route': 'login',
+        #         'status': 302
+        #     }
+        # return (response_data), 302
+        pass # Socket emit not logged in
+
+    mycursor = mydb.cursor()
+    mycursor.execute("SELECT * FROM gamesIds")
+    games = mycursor.fetchall()
+
+    print(games)
+
+    games_list = {}
+
+    for game in games:
+        if game[3]:
+            games_list[game[0]]: {
+                'totalPlayers': game[2],
+                'currentPlayers': len(game[1])
+            }
+    
+    response_data = {
+        'uuid': data['uuid'],
+        'games_list': games_list,
+
+    }
+
+    emit('get_games_list', response_data, broadcast=False)
+
+    # gameRooms = { roomNumber: len(route_users[roomNumber]) for roomNumber in route_users }
+    # emit('get_games_list', { 'rooms': gameRooms, 'user': request.sid }, broadcast=False)
+
+@app.route("/selectGame", methods = ["POST"])
+def selectGame():
+    data = request.get_json()
+    # print('selected room', data)
+
+    if 'uuid' not in data or not data['uuid']:
+        response_data = {
+                'route': 'login',
+                'status': 302
+            }
+        return (response_data), 302
+
+    game_uuid = data['game_uuid']
+
+
+    mycursor = mydb.cursor()
+    mycursor.execute("SELECT * FROM gamesIds WHERE gameuuid = "+str(game_uuid)+";")
+    myresult = mycursor.fetchall()
+
+    totalPlayers = myresult[0][2]
+    currentPlayers = len(myresult[0][1]) + 1
+
+    if myresult[0][3]:
+        mycursor = mydb.cursor()
+        
+        playersList = ast.literal_eval(myresult[0][1])
+        playersList.append(data['uuid'])
+        playersList = str(playersList)
+
+        sql1 = "UPDATE gamesIds SET playerlist = %s WHERE gameuuid = %s"
+        val1 = (playersList, game_uuid)
+
+        mycursor.execute(sql1, val1)
+        mydb.commit()
+
+        if totalPlayers == currentPlayers:
+            sql2 = "UPDATE gamesIds SET is_active = %s WHERE gameuuid = %s"
+            val2 = (False, game_uuid)
+            mycursor.execute(sql2, val2)
+            mydb.commit()
+        
+        response_data = {
+            'uuid': data['uuid'],
+            'game_uuid': game_uuid,
+            'route': 'game/'+str(game_uuid),
+            'status': 302
+        }
+        return jsonify(response_data), 302
+
+    response_data = {
+        'uuid': data['uuid'],
+        'refresh': True,
+        'status': 402
+    }
+    return jsonify(response_data), 402
+
+    # return redirect(url_for('game', route=str(data)), code=302)
+    # return {'url': 'game/'+str(data)}
 
 
 @socketio.on('disconnect')
