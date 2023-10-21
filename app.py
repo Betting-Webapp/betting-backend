@@ -26,8 +26,8 @@ mydb = mysql.connector.connect(
     )
 
 app = Flask(__name__)
-socketio = SocketIO(app)
 CORS(app, resources={r"/*": {"origins": "*"}})
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 route_users = {}
 game_bets = {}
@@ -180,22 +180,32 @@ def listGames(data):
         #     }
         # return (response_data), 302
         pass # Socket emit not logged in
-
+    mydb = mysql.connector.connect(
+    user="Nishad", 
+    password="Game@1998",
+    host="betting-game.mysql.database.azure.com",
+    port=3306,
+    database="bettinggame", 
+    ssl_ca="DigiCertGlobalRootCA.crt.pem", 
+    ssl_disabled=False
+    )
     mycursor = mydb.cursor()
     mycursor.execute("SELECT * FROM gamesIds")
     games = mycursor.fetchall()
 
-    print(games)
+    # print(games)
 
-    games_list = {}
+    games_list = []
 
     for game in games:
+        add_game = {}
         if game[3]:
-            games_list[game[0]]: {
+            add_game[game[0]] = {}
+            add_game[game[0]] = {
                 'totalPlayers': game[2],
                 'currentPlayers': len(game[1])
             }
-    
+            games_list.append(add_game)
     response_data = {
         'uuid': data['uuid'],
         'games_list': games_list,
