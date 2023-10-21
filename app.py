@@ -134,6 +134,15 @@ def join(route_info):
 @socketio.on('createGame')
 def createGame(data):
     # return createGameHandler(mydb, request)
+    mydb = mysql.connector.connect(
+    user="Nishad", 
+    password="Game@1998",
+    host="betting-game.mysql.database.azure.com",
+    port=3306,
+    database="bettinggame", 
+    ssl_ca="DigiCertGlobalRootCA.crt.pem", 
+    ssl_disabled=False
+    )
 
     if 'uuid' not in data or not data['uuid']:
         response_data = {
@@ -150,11 +159,9 @@ def createGame(data):
         #         'status': 302
         #     }
         #     return jsonify(response_data), 302
-
         game_uuid = uuid.uuid4()
         numPlayers = data['numPlayers']
         playerList = str([data['uuid']])
-
         mycursor = mydb.cursor()
         sql = "INSERT INTO gamesIds (gameuuid, playerlist, totalplayers, is_active) VALUES (%s, %s, %s, %s)"
         values = (str(game_uuid), playerList, numPlayers, True)
@@ -164,7 +171,7 @@ def createGame(data):
         response_data = {
             'route': 'game/'+str(game_uuid),
             'uuid': data['uuid'],
-            'game_uuid': game_uuid,
+            'game_uuid': str(game_uuid),
             'status': 302
         }
         join_room(game_uuid)
