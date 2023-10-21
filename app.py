@@ -11,6 +11,7 @@ import os
 import ast
 import uuid
 import random
+import ast
 # import marketplace
 
 from flask_socketio import SocketIO, emit, join_room, close_room #, rooms, leave_room
@@ -161,10 +162,11 @@ def createGame(data):
         #     return jsonify(response_data), 302
         game_uuid = uuid.uuid4()
         numPlayers = data['numPlayers']
+        balance = data['balance']
         playerList = str([data['uuid']])
         mycursor = mydb.cursor()
-        sql = "INSERT INTO gamesIds (gameuuid, playerlist, totalplayers, is_active) VALUES (%s, %s, %s, %s)"
-        values = (str(game_uuid), playerList, numPlayers, True)
+        sql = "INSERT INTO gamesDetail (gameuuid, playerlist, totalplayers, balance, is_active) VALUES (%s, %s, %s, %s, %s)"
+        values = (str(game_uuid), playerList, numPlayers, balance, True)
         mycursor.execute(sql, values)
         mydb.commit()
 
@@ -197,7 +199,7 @@ def listGames(data):
     ssl_disabled=False
     )
     mycursor = mydb.cursor()
-    mycursor.execute("SELECT * FROM gamesIds")
+    mycursor.execute("SELECT * FROM gamesDetail")
     games = mycursor.fetchall()
 
     # print(games)
@@ -242,13 +244,13 @@ def selectGame(data):
         game_uuid = data['game_uuid']
 
         mycursor = mydb.cursor()
-        mycursor.execute("SELECT * FROM gamesIds WHERE gameuuid = "+str(game_uuid)+";")
+        mycursor.execute("SELECT * FROM gamesDetail WHERE gameuuid = "+str(game_uuid)+";")
         myresult = mycursor.fetchall()
 
         totalPlayers = myresult[0][2]
         currentPlayers = len(myresult[0][1]) + 1
 
-        if myresult[0][3]:
+        if myresult[0][4]:
             mycursor = mydb.cursor()
             
             playersList = ast.literal_eval(myresult[0][1])
@@ -256,7 +258,7 @@ def selectGame(data):
             playersList = str(playersList)
             join_room(game_uuid)
 
-            sql1 = "UPDATE gamesIds SET playerlist = %s WHERE gameuuid = %s"
+            sql1 = "UPDATE gamesDetail SET playerlist = %s WHERE gameuuid = %s"
             val1 = (playersList, game_uuid)
 
             mycursor.execute(sql1, val1)
@@ -266,14 +268,22 @@ def selectGame(data):
                 'uuid': data['uuid'],
                 'game_uuid': game_uuid,
                 'route': 'game/'+str(game_uuid),
-                'status': 302
+                'status': 302,
+                'balance': myresult[0][3]
             }
 
             if totalPlayers == currentPlayers:
-                sql2 = "UPDATE gamesIds SET is_active = %s WHERE gameuuid = %s"
+                sql2 = "UPDATE gamesDetail SET is_active = %s WHERE gameuuid = %s"
                 val2 = (False, game_uuid)
                 mycursor.execute(sql2, val2)
                 mydb.commit()
+
+                for player in ast.literal_eval(playersList):
+                    sql3 = "INSERT INTO playerbalance (playeruuid, gameuuid, balance, is_active, skip_round) VALUES (%s, %s, %s, %s, %s);"
+                    val3 = (player, game_uuid, myresult[0][3], True, False)
+                    mycursor.execute(sql3, val3)
+                    mydb.commit()
+
                 emit('start-game', response_data, room=game_uuid, broadcast=True)
             
             # return jsonify(response_data), 302
@@ -309,6 +319,22 @@ def handle_message(data):
 def place_bets(data):
     if data['route'] not in game_bets:
         game_bets[data['route']] = []
+    
+    mydb = mysql.connector.connect(
+    user="Nishad", 
+    password="Game@1998",
+    host="betting-game.mysql.database.azure.com",
+    port=3306,
+    database="bettinggame", 
+    ssl_ca="DigiCertGlobalRootCA.crt.pem", 
+    ssl_disabled=False
+    )
+
+    game_uuid = data['gameuuid']
+    mycursor = mydb.cursor()
+    mycursor.execute("select * from playerbalance where gameuuid = %s and is_active = %s and skip_round = %s;", (game_uuid, True, False))
+    playerBetDetails = mycursor.fetchall()
+    totalPlayersCount = len(playerBetDetails)
     
     game_bets[data['route']].append((request.sid, data['bet']))
 
