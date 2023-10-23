@@ -201,18 +201,15 @@ def listGames(data):
     mycursor = mydb.cursor()
     mycursor.execute("SELECT * FROM gamesDetail")
     games = mycursor.fetchall()
-
     # print(games)
-
     games_list = []
-
     for game in games:
         add_game = {}
-        if game[3]:
+        if game[4]:
             add_game[game[0]] = {}
             add_game[game[0]] = {
                 'totalPlayers': game[2],
-                'currentPlayers': len(game[1])
+                'currentPlayers': len(ast.literal_eval(game[1]))
             }
             games_list.append(add_game)
     response_data = {
@@ -220,7 +217,6 @@ def listGames(data):
         'games_list': games_list,
 
     }
-
     emit('get_games_list', response_data, broadcast=False)
 
     # gameRooms = { roomNumber: len(route_users[roomNumber]) for roomNumber in route_users }
@@ -231,7 +227,15 @@ def listGames(data):
 def selectGame(data):
     # data = request.get_json()
     # print('selected room', data)
-
+    mydb = mysql.connector.connect(
+    user="Nishad", 
+    password="Game@1998",
+    host="betting-game.mysql.database.azure.com",
+    port=3306,
+    database="bettinggame", 
+    ssl_ca="DigiCertGlobalRootCA.crt.pem", 
+    ssl_disabled=False
+    )
     if 'uuid' not in data or not data['uuid']:
         response_data = {
                 'route': 'login',
@@ -244,11 +248,11 @@ def selectGame(data):
         game_uuid = data['game_uuid']
 
         mycursor = mydb.cursor()
-        mycursor.execute("SELECT * FROM gamesDetail WHERE gameuuid = "+str(game_uuid)+";")
+        mycursor.execute("SELECT * FROM gamesDetail WHERE gameuuid=%s", (game_uuid,))
         myresult = mycursor.fetchall()
 
         totalPlayers = myresult[0][2]
-        currentPlayers = len(myresult[0][1]) + 1
+        currentPlayers = len(ast.literal_eval(myresult[0][1])) + 1
 
         if myresult[0][4]:
             mycursor = mydb.cursor()
@@ -285,9 +289,9 @@ def selectGame(data):
                     mydb.commit()
 
                 emit('start-game', response_data, room=game_uuid, broadcast=True)
-            
             # return jsonify(response_data), 302
-            emit('lobby', response_data, broadcast=False)
+            else:
+                emit('lobby', response_data, broadcast=False)
 
         else:
             response_data = {
