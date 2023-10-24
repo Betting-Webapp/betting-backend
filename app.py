@@ -157,13 +157,6 @@ def createGame(data):
         emit('redirect-to-login', response_data, broadcast=False)
     
     else:
-        # if request.method == "GET":
-        #     response_data = {
-        #         'route': 'createGame',
-        #         'uuid': data['uuid'],
-        #         'status': 302
-        #     }
-        #     return jsonify(response_data), 302
         game_uuid = uuid.uuid4()
         numPlayers = data['numPlayers']
         balance = data['balance']
@@ -174,12 +167,16 @@ def createGame(data):
         mycursor.execute(sql, values)
         mydb.commit()
 
+        # Maintain player-game-sid map
+        user_game_sid_map[(game_uuid, data['uuid'])] = request.sid
+
         response_data = {
             'route': 'game/'+str(game_uuid),
             'uuid': data['uuid'],
             'game_uuid': str(game_uuid),
             'status': 302
         }
+        
         join_room(game_uuid)
         emit('lobby', response_data, broadcast=False)
 
