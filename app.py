@@ -363,8 +363,8 @@ def place_bets(data):
     playersBetsPlaced = list(filter(lambda li: li[-1] == 1, playerBetDetails))
     playersBetsCount = len(playersBetsPlaced)
 
-    winning_uuids = set()
-    losing_uuids = set()
+    winning_uuids = []
+    losing_uuids = []
 
     if playersBetsCount == totalPlayersCount:
         skipper_uuid = ''
@@ -374,12 +374,12 @@ def place_bets(data):
                 # Set Winner
                 mycursor.execute("UPDATE playerbalances SET balance=%s WHERE playeruuid=%s AND gameuuid=%s", (playersBetsPlaced[index][2] - playersBetsPlaced[index][-2], playersBetsPlaced[index][0], game_uuid))
                 mydb.commit()
-                winning_uuids.add(playersBetsPlaced[index][0])
+                winning_uuids.append(playersBetsPlaced[index][0])
 
                 # Set Loser
                 mycursor.execute("UPDATE playerbalances SET balance=%s, is_active=%s WHERE playeruuid=%s AND gameuuid=%s", (playersBetsPlaced[index+1][2] - playersBetsPlaced[index+1][-2], False, playersBetsPlaced[index+1][0], game_uuid))
                 mydb.commit()
-                losing_uuids.add(playersBetsPlaced[index+1][0])
+                losing_uuids.append(playersBetsPlaced[index+1][0])
 
                 # Find Round Skipper
                 if playersBetsPlaced[index][-2] > max_bet:
@@ -389,12 +389,12 @@ def place_bets(data):
                 # Set Winner
                 mycursor.execute("UPDATE playerbalances SET balance=%s WHERE playeruuid=%s AND gameuuid=%s", (playersBetsPlaced[index+1][2] - playersBetsPlaced[index+1][-2], playersBetsPlaced[index+1][0], game_uuid))
                 mydb.commit()
-                winning_uuids.add(playersBetsPlaced[index+1][0])
+                winning_uuids.append(playersBetsPlaced[index+1][0])
 
                 # Set Loser
                 mycursor.execute("UPDATE playerbalances SET balance=%s, is_active=%s WHERE playeruuid=%s AND gameuuid=%s", (playersBetsPlaced[index][2] - playersBetsPlaced[index][-2], False, playersBetsPlaced[index][0], game_uuid))
                 mydb.commit()
-                losing_uuids.add(playersBetsPlaced[index][0])
+                losing_uuids.append(playersBetsPlaced[index][0])
 
                 # Find Round Skipper
                 if playersBetsPlaced[index+1][-2] > max_bet:
