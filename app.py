@@ -415,7 +415,8 @@ def place_bets(data):
         if totalPlayersCount > 2:
             mycursor.execute("UPDATE playerbalances SET skip_round=%s WHERE playeruuid=%s AND gameuuid=%s", (True, skipper_uuid, game_uuid))
             mydb.commit()
-            winning_uuids.remove(skippedPlayer[0])
+        if skippedPlayer is not None:
+            winning_uuids.discard(skippedPlayer[0])
 
         # Broadcast loss to players who lost
         losing_sids = [user_game_sid_map[(game_uuid, losing_uuid)] for losing_uuid in losing_uuids]
