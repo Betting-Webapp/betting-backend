@@ -471,7 +471,10 @@ def place_bets(data):
                 'round': round
             }
             emit('continue-game', response_data, to=user_game_sid_map[(game_uuid, skippedPlayer[0])])
-
+        
+        # Reset has_bet field in DB to allow betting in the next round
+        mycursor.execute("UPDATE playerbalances SET has_bet=%s WHERE gameuuid=%s", (False, game_uuid))
+        mydb.commit()
 
     
 
