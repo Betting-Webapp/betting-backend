@@ -349,8 +349,9 @@ def place_bets(data):
     # Place current player's bet and update balance
     mycursor.execute("SELECT * FROM playerbalances WHERE gameuuid=%s AND playeruuid=%s", (game_uuid, data['uuid']))
     currentPlayer = mycursor.fetchall()[0]
-    new_balance = int(currentPlayer[2]) - data['bet']
-    mycursor.execute("UPDATE playerbalances SET has_bet=%s, currentbet=%s, balance=%s WHERE playeruuid=%s AND gameuuid=%s", (True, data['bet'], new_balance, data['uuid'], game_uuid))
+    # new_balance = int(currentPlayer[2]) - data['bet']
+    # mycursor.execute("UPDATE playerbalances SET has_bet=%s, currentbet=%s, balance=%s WHERE playeruuid=%s AND gameuuid=%s", (True, data['bet'], new_balance, data['uuid'], game_uuid))
+    mycursor.execute("UPDATE playerbalances SET has_bet=%s, currentbet=%s WHERE playeruuid=%s AND gameuuid=%s", (True, data['bet'], data['uuid'], game_uuid))
     mydb.commit()
 
     # Update total game reward - accumulation of all the bets placed so far
@@ -431,7 +432,7 @@ def place_bets(data):
             del user_game_sid_map[(game_uuid, losing_uuids[index])]
         
         # Broadcast Game Winner
-        if not skippedPlayer:
+        if not skippedPlayer and totalPlayersCount==2:
             game_winner_uuid = winning_uuids.pop()
             game_winner_sid = user_game_sid_map[(game_uuid, game_winner_uuid)]
             response_data = {
