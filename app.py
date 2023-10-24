@@ -439,7 +439,8 @@ def place_bets(data):
             response_data = {
                 'uuid': game_winner_uuid,
                 'game_uuid': game_uuid,
-                'route': 'listGames'
+                'route': 'listGames',
+                'reward': game_reward[game_uuid]
             }
             emit('winner', response_data, to=game_winner_sid)
             leave_room(game_uuid, game_winner_sid)
