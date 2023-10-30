@@ -4,10 +4,6 @@ from model.registerPlayer import registerPlayer
 from model.loginPlayer import loginPlayer
 from model.createGameHandler import createGameHandler
 import mysql.connector
-from datetime import datetime
-from PIL import Image
-import json
-import os
 import ast
 import uuid
 import random
@@ -482,7 +478,7 @@ def place_bets(data):
 
 
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    socketio.run(app, host = '0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
 
 # if __name__ == "__main__":
 #     app.run(debug=True)
