@@ -1,8 +1,18 @@
 from flask import Blueprint, render_template, request, flash, redirect, url_for, Flask, jsonify
 import uuid
+import mysql.connector
 
 
-def registerPlayer(mydb, request):
+def registerPlayer(request):
+    mydb = mysql.connector.connect(
+    user="Nishad", 
+    password="Game@1998",
+    host="betting-game.mysql.database.azure.com",
+    port=3306,
+    database="bettinggame", 
+    ssl_ca="./certs/DigiCertGlobalRootCA.crt.pem", 
+    ssl_disabled=False
+    )
     if request.method == "POST":
         data = request.get_json()
         emailAddress = data["email"]
