@@ -164,7 +164,8 @@ def createGame(data):
         mydb.commit()
 
         # Maintain player-game-sid map
-        user_game_sid_map[(game_uuid, data['uuid'])] = request.sid
+        global user_game_sid_map
+        user_game_sid_map[(str(game_uuid), data['uuid'])] = request.sid
 
         response_data = {
             'route': 'game/'+str(game_uuid),
@@ -266,6 +267,7 @@ def selectGame(data):
             mydb.commit()
 
             # Maintain player-game-sid map
+            global user_game_sid_map
             user_game_sid_map[(game_uuid, data['uuid'])] = request.sid
 
             response_data = {
@@ -402,7 +404,7 @@ def place_bets(data):
         mycursor.execute("SELECT * FROM playerbalances WHERE gameuuid = %s AND is_active = %s AND skip_round = %s;", (game_uuid, True, True))
         skippedPlayer = mycursor.fetchall()
         if len(skippedPlayer):
-            skippedPlayer = skippedPlayer[0]
+            # skippedPlayer = skippedPlayer[0]
             mycursor.execute("UPDATE playerbalances SET skip_round=%s WHERE playeruuid=%s AND gameuuid=%s", (False, skippedPlayer[0], game_uuid))
             mydb.commit()
         else:
@@ -412,8 +414,12 @@ def place_bets(data):
         if totalPlayersCount > 2:
             mycursor.execute("UPDATE playerbalances SET skip_round=%s WHERE playeruuid=%s AND gameuuid=%s", (True, skipper_uuid, game_uuid))
             mydb.commit()
-        if skippedPlayer is not None:
-            winning_uuids.discard(skippedPlayer[0])
+            winning_uuids.remove(skipper_uuid)
+        # if skippedPlayer is not None:
+        #     winning_uuids.discard(skippedPlayer[0])
+
+        # Load global variable
+        global user_game_sid_map
 
         # Broadcast loss to players who lost
         losing_sids = [user_game_sid_map[(game_uuid, losing_uuid)] for losing_uuid in losing_uuids]
@@ -462,13 +468,24 @@ def place_bets(data):
                 emit('continue-game', response_data, to=winning_sid)
             
             # Broadcast next round to player who skipped the current round
-            response_data = {
-                'uuid': skippedPlayer[0],
-                'game_uuid': game_uuid,
-                'balance': skippedPlayer[2],
-                'round': round
-            }
-            emit('continue-game', response_data, to=user_game_sid_map[(game_uuid, skippedPlayer[0])])
+            if skippedPlayer:
+                response_data = {
+                    'uuid': skippedPlayer[0],
+                    'game_uuid': game_uuid,
+                    'balance': skippedPlayer[2],
+                    'round': round
+                }
+                emit('continue-game', response_data, to=user_game_sid_map[(game_uuid, skippedPlayer[0])])
+            
+            # Broadcast wait to the player who will be skipping the next round
+            if skipper_uuid and totalPlayersCount > 2:
+                response_data = {
+                    'uuid': skipper_uuid,
+                    'game_uuid': game_uuid,
+                    'balance': 0,
+                    'round': round
+                }
+                emit('skipping-round', response_data, to=user_game_sid_map[(game_uuid, skipper_uuid)])
         
         # Reset has_bet field in DB to allow betting in the next round
         mycursor.execute("UPDATE playerbalances SET has_bet=%s WHERE gameuuid=%s", (False, game_uuid))
