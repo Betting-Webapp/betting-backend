@@ -345,8 +345,8 @@ def place_bets(data):
     mycursor = mydb.cursor()
 
     # Place current player's bet and update balance
-    mycursor.execute("SELECT * FROM playerbalances WHERE gameuuid=%s AND playeruuid=%s", (game_uuid, data['uuid']))
-    currentPlayer = mycursor.fetchall()[0]
+    # mycursor.execute("SELECT * FROM playerbalances WHERE gameuuid=%s AND playeruuid=%s", (game_uuid, data['uuid']))
+    # currentPlayer = mycursor.fetchall()[0]
     # new_balance = int(currentPlayer[2]) - data['bet']
     # mycursor.execute("UPDATE playerbalances SET has_bet=%s, currentbet=%s, balance=%s WHERE playeruuid=%s AND gameuuid=%s", (True, data['bet'], new_balance, data['uuid'], game_uuid))
     mycursor.execute("UPDATE playerbalances SET has_bet=%s, currentbet=%s WHERE playeruuid=%s AND gameuuid=%s", (True, data['bet'], data['uuid'], game_uuid))
@@ -404,7 +404,7 @@ def place_bets(data):
         mycursor.execute("SELECT * FROM playerbalances WHERE gameuuid = %s AND is_active = %s AND skip_round = %s;", (game_uuid, True, True))
         skippedPlayer = mycursor.fetchall()
         if len(skippedPlayer):
-            # skippedPlayer = skippedPlayer[0]
+            skippedPlayer = skippedPlayer[0]
             mycursor.execute("UPDATE playerbalances SET skip_round=%s WHERE playeruuid=%s AND gameuuid=%s", (False, skippedPlayer[0], game_uuid))
             mydb.commit()
         else:
@@ -457,7 +457,7 @@ def place_bets(data):
                 round = 'ultimate'
             # Broadcast next round to players who won that round
             winning_sids = [user_game_sid_map[(game_uuid, winning_uuid)] for winning_uuid in winning_uuids]
-            winning_balances = list(filter(lambda li: li[2], list(filter(lambda li: li[0] in winning_uuids, playerBetDetails))))
+            winning_balances = [li[2] - li[5] for li in list(filter(lambda li: li[0] in winning_uuids, playerBetDetails))]
             for index, winning_sid in enumerate(winning_sids):
                 response_data = {
                     'uuid': winning_uuids[index],
