@@ -3,13 +3,13 @@ import mysql.connector
 
 def loginPlayer(request):
     mydb = mysql.connector.connect(
-    user="Nishad", 
-    password="Game@1998",
-    host="betting-game.mysql.database.azure.com",
-    port=3306,
-    database="bettinggame", 
-    ssl_ca="./certs/DigiCertGlobalRootCA.crt.pem", 
-    ssl_disabled=False
+        user="admin", 
+        password="bettingTrial",
+        host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
+        port=3306,
+        database="bettingGame",
+        ssl_ca="./certs/rds-combined-ca-bundle.pem",
+        ssl_disabled=False
     )
     if request.method == "POST":
         data = request.get_json()

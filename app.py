@@ -12,13 +12,23 @@ import ast
 
 from flask_socketio import SocketIO, emit, join_room, close_room, leave_room #, rooms, leave_room
 
+# mydb = mysql.connector.connect(
+#     user="Nishad", 
+#     password="Game@1998",
+#     host="betting-game.mysql.database.azure.com",
+#     port=3306,
+#     database="bettingGame", 
+#     ssl_ca="./certs/DigiCertGlobalRootCA.crt.pem", 
+#     ssl_disabled=False
+#     )
+
 mydb = mysql.connector.connect(
-    user="Nishad", 
-    password="Game@1998",
-    host="betting-game.mysql.database.azure.com",
+    user="admin", 
+    password="bettingTrial",
+    host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
     port=3306,
-    database="bettinggame", 
-    ssl_ca="./certs/DigiCertGlobalRootCA.crt.pem", 
+    database="bettingGame",
+    ssl_ca="./certs/rds-combined-ca-bundle.pem",
     ssl_disabled=False
     )
 
@@ -136,13 +146,13 @@ def join(route_info):
 def createGame(data):
     # return createGameHandler(mydb, request)
     mydb = mysql.connector.connect(
-    user="Nishad", 
-    password="Game@1998",
-    host="betting-game.mysql.database.azure.com",
-    port=3306,
-    database="bettinggame", 
-    ssl_ca="./certs/DigiCertGlobalRootCA.crt.pem",  
-    ssl_disabled=False
+        user="admin", 
+        password="bettingTrial",
+        host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
+        port=3306,
+        database="bettingGame",
+        ssl_ca="./certs/rds-combined-ca-bundle.pem",
+        ssl_disabled=False
     )
 
     if 'uuid' not in data or not data['uuid']:
@@ -188,13 +198,13 @@ def listGames(data):
         # return (response_data), 302
         pass # Socket emit not logged in
     mydb = mysql.connector.connect(
-    user="Nishad", 
-    password="Game@1998",
-    host="betting-game.mysql.database.azure.com",
-    port=3306,
-    database="bettinggame", 
-    ssl_ca="./certs/DigiCertGlobalRootCA.crt.pem", 
-    ssl_disabled=False
+        user="admin", 
+        password="bettingTrial",
+        host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
+        port=3306,
+        database="bettingGame",
+        ssl_ca="./certs/rds-combined-ca-bundle.pem",
+        ssl_disabled=False
     )
     mycursor = mydb.cursor()
     mycursor.execute("SELECT * FROM gamesDetail")
@@ -226,13 +236,13 @@ def selectGame(data):
     # data = request.get_json()
     # print('selected room', data)
     mydb = mysql.connector.connect(
-    user="Nishad", 
-    password="Game@1998",
-    host="betting-game.mysql.database.azure.com",
-    port=3306,
-    database="bettinggame", 
-    ssl_ca="./certs/DigiCertGlobalRootCA.crt.pem",  
-    ssl_disabled=False
+        user="admin", 
+        password="bettingTrial",
+        host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
+        port=3306,
+        database="bettingGame",
+        ssl_ca="./certs/rds-combined-ca-bundle.pem",
+        ssl_disabled=False
     )
     if 'uuid' not in data or not data['uuid']:
         response_data = {
@@ -332,13 +342,13 @@ def place_bets(data):
         emit('redirect-to-login', response_data, broadcast=False)
     
     mydb = mysql.connector.connect(
-    user="Nishad", 
-    password="Game@1998",
-    host="betting-game.mysql.database.azure.com",
-    port=3306,
-    database="bettinggame", 
-    ssl_ca="./certs/DigiCertGlobalRootCA.crt.pem",  
-    ssl_disabled=False
+        user="admin", 
+        password="bettingTrial",
+        host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
+        port=3306,
+        database="bettingGame",
+        ssl_ca="./certs/rds-combined-ca-bundle.pem",
+        ssl_disabled=False
     )
 
     game_uuid = data['game_uuid']
@@ -495,7 +505,7 @@ def place_bets(data):
 
 
 if __name__ == '__main__':
-    socketio.run(app, host = '0.0.0.0', port=5000, debug=True, allow_unsafe_werkzeug=True)
+    socketio.run(app, host = '0.0.0.0', port=5001, debug=True, allow_unsafe_werkzeug=True)
 
 # if __name__ == "__main__":
 #     app.run(debug=True)
