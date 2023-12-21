@@ -6,8 +6,9 @@ from model.createGameHandler import createGameHandler
 import mysql.connector
 import ast
 import uuid
-import random
-import ast
+# import random
+# import ast
+# import threading
 # import marketplace
 
 from flask_socketio import SocketIO, emit, join_room, close_room, leave_room #, rooms, leave_room
@@ -36,21 +37,22 @@ app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-route_users = {}
-game_bets = {}
+# route_users = {}
+# game_bets = {}
 
 # Migrate the below to redis later
 user_game_sid_map = {} # key = (game_uuid, player_uuid), value = user's sid
 game_reward = {} # key = game_uuid, value = game's final reward
+user_timers = {} # key = session_id, value = timer object
 
 @app.route("/")
 @cross_origin()
 def index():
     return loginPlayer(request)
 
-@app.route('/game/<route>')
-def game(route):
-    return render_template('game.html', route=route)
+# @app.route('/game/<route>')
+# def game(route):
+#     return render_template('game.html', route=route)
 
 # @app.route('/test',  methods = ["GET", "POST"])
 # def test():
@@ -69,96 +71,95 @@ def register():
 def login():
     return loginPlayer(request)
 
-@app.route("/bet", methods=["POST"])
-def bet():
-    if request.method == "POST":
-        user_bet = request.form["bet"]
-        coin_toss_result = random.choice(["heads", "tails"])
+# @app.route("/bet", methods=["POST"])
+# def bet():
+#     if request.method == "POST":
+#         user_bet = request.form["bet"]
+#         coin_toss_result = random.choice(["heads", "tails"])
 
-        if user_bet == coin_toss_result:
-            result = "You win!"
-        else:
-            result = "You lose."
+#         if user_bet == coin_toss_result:
+#             result = "You win!"
+#         else:
+#             result = "You lose."
 
-        return render_template("result.html", user_bet=user_bet, result=result, coin_toss_result=coin_toss_result)
+#         return render_template("result.html", user_bet=user_bet, result=result, coin_toss_result=coin_toss_result)
     
-@app.route('/makeBets/<route>', methods=["GET", "POST"])
-def makeBets(route):
-    if request.method == "POST":
-        emailAddress = request.form.get("email")
-        password = request.form.get("password")
+# @app.route('/makeBets/<route>', methods=["GET", "POST"])
+# def makeBets(route):
+#     if request.method == "POST":
+#         emailAddress = request.form.get("email")
+#         password = request.form.get("password")
 
-        print(emailAddress, password)
-        game_bets.append((emailAddress, password))
-        print(route, 'game bets', game_bets)
-        # user_bet = request.form["bet"]
-        # coin_toss_result = random.choice(["heads", "tails"])
+#         print(emailAddress, password)
+#         game_bets.append((emailAddress, password))
+#         print(route, 'game bets', game_bets)
+#         # user_bet = request.form["bet"]
+#         # coin_toss_result = random.choice(["heads", "tails"])
 
-        # if user_bet == coin_toss_result:
-        #     result = "You win!"
-        # else:
-        #     result = "You lose."
+#         # if user_bet == coin_toss_result:
+#         #     result = "You win!"
+#         # else:
+#         #     result = "You lose."
 
-        return render_template("result.html", user_bet=1, result=1, coin_toss_result=1)
-    print("~~~~~~ MAKE YOUR BETS ~~~~~~~")
-    return render_template("makeBets.html")
+#         return render_template("result.html", user_bet=1, result=1, coin_toss_result=1)
+#     print("~~~~~~ MAKE YOUR BETS ~~~~~~~")
+#     return render_template("makeBets.html")
 
-@app.route('/winner', methods=["GET"])
-def winner():
-    return render_template("winner.html")
+# @app.route('/winner', methods=["GET"])
+# def winner():
+#     return render_template("winner.html")
 
-@app.route('/loser', methods=["GET"])
-def loser():
-    return render_template("loser.html")
+# @app.route('/loser', methods=["GET"])
+# def loser():
+#     return render_template("loser.html")
 
-@socketio.on('determine_winner')
-def determine_winner():
-    route = request.args.get('route')
+# @socketio.on('determine_winner')
+# def determine_winner():
+#     route = request.args.get('route')
 
 @socketio.on('connect')
 def handle_connect():
     route = request.args.get('route')
     print('Connected, args route = ', route)
 
-@socketio.on('join')
-def join(route_info):
-    r = request.args.get('route')
-    print('args route', r)
-    route = route_info['route']
-    if route not in route_users:
-        route_users[route] = []
+# @socketio.on('join')
+# def join(route_info):
+#     r = request.args.get('route')
+#     print('args route', r)
+#     route = route_info['route']
+#     if route not in route_users:
+#         route_users[route] = []
 
-    if len(route_users[route]) < 3:
-        route_users[route].append(request.sid)
-        print(route_users)
-        join_room(route)
-        emit('message', {'data': 'Connected', 'count': len(route_users[route])}, room=r)
-        print('route', route, 'num users', route_users[route])
-        if len(route_users[route]) == 3:
-            print('here')
-            emit('start_game', {'route': route}, broadcast=True, room=route)
-            # return redirect(url_for('login'))
-    else:
-        emit('message', {'data': 'Room full. Cannot join.'})
+#     if len(route_users[route]) < 3:
+#         route_users[route].append(request.sid)
+#         print(route_users)
+#         join_room(route)
+#         emit('message', {'data': 'Connected', 'count': len(route_users[route])}, room=r)
+#         print('route', route, 'num users', route_users[route])
+#         if len(route_users[route]) == 3:
+#             print('here')
+#             emit('start_game', {'route': route}, broadcast=True, room=route)
+#             # return redirect(url_for('login'))
+#     else:
+#         emit('message', {'data': 'Room full. Cannot join.'})
 
-# @app.route("/createGame", methods = ["GET", "POST"])
 @socketio.on('createGame')
 def createGame(data):
-    # return createGameHandler(mydb, request)
-    mydb = mysql.connector.connect(
-        user="admin", 
-        password="bettingTrial",
-        host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
-        port=3306,
-        database="bettingGame",
-        ssl_ca="./certs/rds-combined-ca-bundle.pem",
-        ssl_disabled=False
-    )
+    # mydb = mysql.connector.connect(
+    #     user="admin", 
+    #     password="bettingTrial",
+    #     host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
+    #     port=3306,
+    #     database="bettingGame",
+    #     ssl_ca="./certs/rds-combined-ca-bundle.pem",
+    #     ssl_disabled=False
+    # )
+    global mydb
 
     if 'uuid' not in data or not data['uuid']:
         response_data = {
             'route': 'login',
-            'status': 302
+            'status': 401
         }
         emit('redirect-to-login', response_data, broadcast=False)
     
@@ -167,9 +168,10 @@ def createGame(data):
         numPlayers = data['numPlayers']
         balance = data['balance']
         playerList = str([data['uuid']])
+        gamename = data['gamename']
         mycursor = mydb.cursor()
-        sql = "INSERT INTO gamesDetail (gameuuid, playerlist, totalplayers, balance, is_active) VALUES (%s, %s, %s, %s, %s)"
-        values = (str(game_uuid), playerList, numPlayers, balance, True)
+        sql = "INSERT INTO gamesDetail (gameuuid, gamename, playerlist, totalplayers, balance, is_active) VALUES (%s, %s, %s, %s, %s, %s)"
+        values = (str(game_uuid), gamename, playerList, numPlayers, balance, True)
         mycursor.execute(sql, values)
         mydb.commit()
 
@@ -180,6 +182,7 @@ def createGame(data):
         response_data = {
             'route': 'game/'+str(game_uuid),
             'uuid': data['uuid'],
+            'gamename': gamename,
             'game_uuid': str(game_uuid),
             'status': 302
         }
@@ -191,21 +194,21 @@ def createGame(data):
 def listGames(data):
 
     if 'uuid' not in data or not data['uuid']:
-        # response_data = {
-        #         'route': 'login',
-        #         'status': 302
-        #     }
-        # return (response_data), 302
-        pass # Socket emit not logged in
-    mydb = mysql.connector.connect(
-        user="admin", 
-        password="bettingTrial",
-        host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
-        port=3306,
-        database="bettingGame",
-        ssl_ca="./certs/rds-combined-ca-bundle.pem",
-        ssl_disabled=False
-    )
+        response_data = {
+                'route': 'login',
+                'status': 401
+            }
+        emit('redirect-to-login', response_data, broadcast=False)
+    # mydb = mysql.connector.connect(
+    #     user="admin", 
+    #     password="bettingTrial",
+    #     host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
+    #     port=3306,
+    #     database="bettingGame",
+    #     ssl_ca="./certs/rds-combined-ca-bundle.pem",
+    #     ssl_disabled=False
+    # )
+    global mydb
     mycursor = mydb.cursor()
     mycursor.execute("SELECT * FROM gamesDetail")
     games = mycursor.fetchall()
@@ -213,11 +216,13 @@ def listGames(data):
     games_list = []
     for game in games:
         add_game = {}
-        if game[4]:
+        if game[5]:
             add_game[game[0]] = {}
             add_game[game[0]] = {
-                'totalPlayers': game[2],
-                'currentPlayers': len(ast.literal_eval(game[1]))
+                'totalPlayers': game[3],
+                'currentPlayers': len(ast.literal_eval(game[2])),
+                'gamename': game[1],
+                'game_uuid': game[0]
             }
             games_list.append(add_game)
     response_data = {
@@ -227,29 +232,26 @@ def listGames(data):
     }
     emit('get_games_list', response_data, broadcast=False)
 
-    # gameRooms = { roomNumber: len(route_users[roomNumber]) for roomNumber in route_users }
-    # emit('get_games_list', { 'rooms': gameRooms, 'user': request.sid }, broadcast=False)
 
-# @app.route("/selectGame", methods = ["POST"])
 @socketio.on("selectGame")
 def selectGame(data):
     # data = request.get_json()
     # print('selected room', data)
-    mydb = mysql.connector.connect(
-        user="admin", 
-        password="bettingTrial",
-        host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
-        port=3306,
-        database="bettingGame",
-        ssl_ca="./certs/rds-combined-ca-bundle.pem",
-        ssl_disabled=False
-    )
+    # mydb = mysql.connector.connect(
+    #     user="admin", 
+    #     password="bettingTrial",
+    #     host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
+    #     port=3306,
+    #     database="bettingGame",
+    #     ssl_ca="./certs/rds-combined-ca-bundle.pem",
+    #     ssl_disabled=False
+    # )
+    global mydb
     if 'uuid' not in data or not data['uuid']:
         response_data = {
                 'route': 'login',
-                'status': 302
+                'status': 401
             }
-        # return (response_data), 302
         emit('redirect-to-login', response_data, broadcast=False)
 
     else:
@@ -259,13 +261,14 @@ def selectGame(data):
         mycursor.execute("SELECT * FROM gamesDetail WHERE gameuuid=%s", (game_uuid,))
         myresult = mycursor.fetchall()
 
-        totalPlayers = myresult[0][2]
-        currentPlayers = len(ast.literal_eval(myresult[0][1])) + 1
+        totalPlayers = myresult[0][3]
+        currentPlayers = len(ast.literal_eval(myresult[0][2])) + 1
+        gamename = myresult[0][1]
 
-        if myresult[0][4]:
+        if myresult[0][5]:
             mycursor = mydb.cursor()
             
-            playersList = ast.literal_eval(myresult[0][1])
+            playersList = ast.literal_eval(myresult[0][2])
             playersList.append(data['uuid'])
             playersList = str(playersList)
             join_room(game_uuid)
@@ -283,9 +286,10 @@ def selectGame(data):
             response_data = {
                 'uuid': data['uuid'],
                 'game_uuid': game_uuid,
+                'gamename': gamename,
                 'route': 'game/'+str(game_uuid),
                 'status': 302,
-                'balance': myresult[0][3]
+                'balance': myresult[0][4]
             }
 
             if totalPlayers == currentPlayers:
@@ -296,11 +300,24 @@ def selectGame(data):
 
                 for player in ast.literal_eval(playersList):
                     sql3 = "INSERT INTO playerbalances (playeruuid, gameuuid, balance, is_active, skip_round, currentbet, has_bet) VALUES (%s, %s, %s, %s, %s, %s, %s);"
-                    val3 = (player, game_uuid, myresult[0][3], True, False, 0, False)
+                    val3 = (player, game_uuid, myresult[0][4], True, False, 0, False)
                     mycursor.execute(sql3, val3)
                     mydb.commit()
 
                 emit('start-game', response_data, room=game_uuid, broadcast=True)
+
+                # def place_default_bet(arg):
+                #     pass
+                
+                # global user_timers
+
+                # users = list(socketio.server.manager.rooms[game_uuid])
+                # for user in users:
+                #     timer = threading.Timer(30, place_default_bet, args=[user])
+                #     timer.start()
+                #     user_timers[user] = timer
+
+
             # return jsonify(response_data), 302
             else:
                 emit('lobby', response_data, broadcast=False)
@@ -317,15 +334,6 @@ def selectGame(data):
             # return redirect(url_for('game', route=str(data)), code=302)
             # return {'url': 'game/'+str(data)}
 
-
-# @socketio.on('disconnect')
-# def handle_disconnect():
-#     route = request.args.get('route')
-#     if route in route_users:
-#         route_users[route].remove(request.sid)
-#         emit('message', {'data': 'Disconnected', 'count': len(route_users[route])}, room=route)
-
-
 # @socketio.on('chat_message')
 # def handle_message(data):
 #     route = request.args.get('route')
@@ -336,20 +344,20 @@ def place_bets(data):
     if 'uuid' not in data or not data['uuid']:
         response_data = {
                 'route': 'login',
-                'status': 302
+                'status': 401
             }
-        # return (response_data), 302
         emit('redirect-to-login', response_data, broadcast=False)
     
-    mydb = mysql.connector.connect(
-        user="admin", 
-        password="bettingTrial",
-        host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
-        port=3306,
-        database="bettingGame",
-        ssl_ca="./certs/rds-combined-ca-bundle.pem",
-        ssl_disabled=False
-    )
+    # mydb = mysql.connector.connect(
+    #     user="admin", 
+    #     password="bettingTrial",
+    #     host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
+    #     port=3306,
+    #     database="bettingGame",
+    #     ssl_ca="./certs/rds-combined-ca-bundle.pem",
+    #     ssl_disabled=False
+    # )
+    global mydb
 
     game_uuid = data['game_uuid']
     mycursor = mydb.cursor()
@@ -473,7 +481,8 @@ def place_bets(data):
                     'uuid': winning_uuids[index],
                     'game_uuid': game_uuid,
                     'balance': winning_balances[index],
-                    'round': round
+                    'round': round,
+                    'reward': game_reward[game_uuid]
                 }
                 emit('continue-game', response_data, to=winning_sid)
             
@@ -483,7 +492,8 @@ def place_bets(data):
                     'uuid': skippedPlayer[0],
                     'game_uuid': game_uuid,
                     'balance': skippedPlayer[2],
-                    'round': round
+                    'round': round,
+                    'reward': game_reward[game_uuid]
                 }
                 emit('continue-game', response_data, to=user_game_sid_map[(game_uuid, skippedPlayer[0])])
             
@@ -493,7 +503,8 @@ def place_bets(data):
                     'uuid': skipper_uuid,
                     'game_uuid': game_uuid,
                     'balance': 0,
-                    'round': round
+                    'round': round,
+                    'reward': game_reward[game_uuid]
                 }
                 emit('skipping-round', response_data, to=user_game_sid_map[(game_uuid, skipper_uuid)])
         
@@ -501,7 +512,14 @@ def place_bets(data):
         mycursor.execute("UPDATE playerbalances SET has_bet=%s WHERE gameuuid=%s", (False, game_uuid))
         mydb.commit()
 
-    
+
+# @socketio.on('disconnect')
+# def handle_disconnect():
+#     route = request.args.get('route')
+#     if route in route_users:
+#         route_users[route].remove(request.sid)
+#         emit('message', {'data': 'Disconnected', 'count': len(route_users[route])}, room=route)
+
 
 
 if __name__ == '__main__':
