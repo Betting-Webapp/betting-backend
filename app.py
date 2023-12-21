@@ -8,7 +8,7 @@ import ast
 import uuid
 # import random
 # import ast
-# import threading
+import threading
 # import marketplace
 
 from flask_socketio import SocketIO, emit, join_room, close_room, leave_room #, rooms, leave_room
@@ -233,6 +233,15 @@ def listGames(data):
     }
     emit('get_games_list', response_data, broadcast=False)
 
+def place_default_bet(sid, player_uuid, game_uuid):
+    sess = socketio.server.get_session(sid)
+    if sess:
+        resp = {
+            'uuid': player_uuid,
+            'game_uuid': game_uuid,
+            'bet': 0
+        }
+        sess.socket.emit('place_bets', resp)
 
 @socketio.on("selectGame")
 def selectGame(data):
@@ -306,17 +315,14 @@ def selectGame(data):
                     mydb.commit()
 
                 emit('start-game', response_data, room=game_uuid, broadcast=True)
-
-                # def place_default_bet(arg):
-                #     pass
                 
-                # global user_timers
+                global user_timers
 
-                # users = list(socketio.server.manager.rooms[game_uuid])
-                # for user in users:
-                #     timer = threading.Timer(30, place_default_bet, args=[user])
-                #     timer.start()
-                #     user_timers[user] = timer
+                users = list(socketio.server.manager.rooms[game_uuid])
+                for user in users:
+                    timer = threading.Timer(30, place_default_bet, args=(user, data_uuid, game_uuid))
+                    timer.start()
+                    user_timers[user] = timer
 
 
             # return jsonify(response_data), 302
@@ -383,6 +389,12 @@ def place_bets(data):
 
     winning_uuids = []
     losing_uuids = []
+
+    global user_timers
+    global user_game_sid_map
+    sid = user_game_sid_map[(game_uuid, data['uuid'])]
+    if sid in user_timers:
+        del user_timers[sid]
 
     if playersBetsCount == totalPlayersCount:
         skipper_uuid = ''
@@ -486,6 +498,12 @@ def place_bets(data):
                     'reward': game_reward[game_uuid]
                 }
                 emit('continue-game', response_data, to=winning_sid)
+
+                # users = list(socketio.server.manager.rooms[game_uuid])
+                for user in winning_sids:
+                    timer = threading.Timer(30, place_default_bet, args=[user])
+                    timer.start()
+                    user_timers[user] = timer
             
             # Broadcast next round to player who skipped the current round
             if skippedPlayer:
