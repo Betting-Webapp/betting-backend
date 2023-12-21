@@ -145,16 +145,16 @@ def handle_connect():
 
 @socketio.on('createGame')
 def createGame(data):
-    # mydb = mysql.connector.connect(
-    #     user="admin", 
-    #     password="bettingTrial",
-    #     host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
-    #     port=3306,
-    #     database="bettingGame",
-    #     ssl_ca="./certs/rds-combined-ca-bundle.pem",
-    #     ssl_disabled=False
-    # )
-    global mydb
+    mydb = mysql.connector.connect(
+        user="admin", 
+        password="bettingTrial",
+        host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
+        port=3306,
+        database="bettingGame",
+        ssl_ca="./certs/rds-combined-ca-bundle.pem",
+        ssl_disabled=False
+    )
+    # global mydb
 
     if 'uuid' not in data or not data['uuid']:
         response_data = {
@@ -199,16 +199,16 @@ def listGames(data):
                 'status': 401
             }
         emit('redirect-to-login', response_data, broadcast=False)
-    # mydb = mysql.connector.connect(
-    #     user="admin", 
-    #     password="bettingTrial",
-    #     host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
-    #     port=3306,
-    #     database="bettingGame",
-    #     ssl_ca="./certs/rds-combined-ca-bundle.pem",
-    #     ssl_disabled=False
-    # )
-    global mydb
+    mydb = mysql.connector.connect(
+        user="admin", 
+        password="bettingTrial",
+        host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
+        port=3306,
+        database="bettingGame",
+        ssl_ca="./certs/rds-combined-ca-bundle.pem",
+        ssl_disabled=False
+    )
+    # global mydb
     mycursor = mydb.cursor()
     mycursor.execute("SELECT * FROM gamesDetail")
     games = mycursor.fetchall()
@@ -237,16 +237,16 @@ def listGames(data):
 def selectGame(data):
     # data = request.get_json()
     # print('selected room', data)
-    # mydb = mysql.connector.connect(
-    #     user="admin", 
-    #     password="bettingTrial",
-    #     host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
-    #     port=3306,
-    #     database="bettingGame",
-    #     ssl_ca="./certs/rds-combined-ca-bundle.pem",
-    #     ssl_disabled=False
-    # )
-    global mydb
+    mydb = mysql.connector.connect(
+        user="admin", 
+        password="bettingTrial",
+        host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
+        port=3306,
+        database="bettingGame",
+        ssl_ca="./certs/rds-combined-ca-bundle.pem",
+        ssl_disabled=False
+    )
+    # global mydb
     if 'uuid' not in data or not data['uuid']:
         response_data = {
                 'route': 'login',
@@ -348,16 +348,16 @@ def place_bets(data):
             }
         emit('redirect-to-login', response_data, broadcast=False)
     
-    # mydb = mysql.connector.connect(
-    #     user="admin", 
-    #     password="bettingTrial",
-    #     host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
-    #     port=3306,
-    #     database="bettingGame",
-    #     ssl_ca="./certs/rds-combined-ca-bundle.pem",
-    #     ssl_disabled=False
-    # )
-    global mydb
+    mydb = mysql.connector.connect(
+        user="admin", 
+        password="bettingTrial",
+        host="bettingtrial.cxodugipf8wx.us-east-2.rds.amazonaws.com",
+        port=3306,
+        database="bettingGame",
+        ssl_ca="./certs/rds-combined-ca-bundle.pem",
+        ssl_disabled=False
+    )
+    # global mydb
 
     game_uuid = data['game_uuid']
     mycursor = mydb.cursor()
