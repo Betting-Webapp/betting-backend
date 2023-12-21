@@ -299,7 +299,7 @@ def selectGame(data):
                 mydb.commit()
 
                 for player in ast.literal_eval(playersList):
-                    sql3 = "INSERT INTO playerbalances (playeruuid, gameuuid, balance, is_active, skip_round, currentbet, has_bet) VALUES (%s, %s, %s, %s, %s, %s, %s);"
+                    sql3 = "INSERT INTO playerBalances (playeruuid, gameuuid, balance, is_active, skip_round, currentbet, has_bet) VALUES (%s, %s, %s, %s, %s, %s, %s);"
                     val3 = (player, game_uuid, myresult[0][4], True, False, 0, False)
                     mycursor.execute(sql3, val3)
                     mydb.commit()
@@ -363,18 +363,18 @@ def place_bets(data):
     mycursor = mydb.cursor()
 
     # Place current player's bet and update balance
-    # mycursor.execute("SELECT * FROM playerbalances WHERE gameuuid=%s AND playeruuid=%s", (game_uuid, data['uuid']))
+    # mycursor.execute("SELECT * FROM playerBalances WHERE gameuuid=%s AND playeruuid=%s", (game_uuid, data['uuid']))
     # currentPlayer = mycursor.fetchall()[0]
     # new_balance = int(currentPlayer[2]) - data['bet']
-    # mycursor.execute("UPDATE playerbalances SET has_bet=%s, currentbet=%s, balance=%s WHERE playeruuid=%s AND gameuuid=%s", (True, data['bet'], new_balance, data['uuid'], game_uuid))
-    mycursor.execute("UPDATE playerbalances SET has_bet=%s, currentbet=%s WHERE playeruuid=%s AND gameuuid=%s", (True, data['bet'], data['uuid'], game_uuid))
+    # mycursor.execute("UPDATE playerBalances SET has_bet=%s, currentbet=%s, balance=%s WHERE playeruuid=%s AND gameuuid=%s", (True, data['bet'], new_balance, data['uuid'], game_uuid))
+    mycursor.execute("UPDATE playerBalances SET has_bet=%s, currentbet=%s WHERE playeruuid=%s AND gameuuid=%s", (True, data['bet'], data['uuid'], game_uuid))
     mydb.commit()
 
     # Update total game reward - accumulation of all the bets placed so far
     game_reward[game_uuid] = data['bet'] if game_uuid not in game_reward else game_reward[game_uuid] + data['bet']
 
     # Check if all players have placed bets
-    mycursor.execute("SELECT * FROM playerbalances WHERE gameuuid = %s AND is_active = %s AND skip_round = %s;", (game_uuid, True, False))
+    mycursor.execute("SELECT * FROM playerBalances WHERE gameuuid = %s AND is_active = %s AND skip_round = %s;", (game_uuid, True, False))
     playerBetDetails = mycursor.fetchall()
     totalPlayersCount = len(playerBetDetails) # Total players in a given round
     playersBetsPlaced = list(filter(lambda li: li[-1] == 1, playerBetDetails))
@@ -389,12 +389,12 @@ def place_bets(data):
         for index in range(0, len(playersBetsPlaced), 2):
             if playersBetsPlaced[index][-2] > playersBetsPlaced[index+1][-2]:
                 # Set Winner
-                mycursor.execute("UPDATE playerbalances SET balance=%s WHERE playeruuid=%s AND gameuuid=%s", (playersBetsPlaced[index][2] - playersBetsPlaced[index][-2], playersBetsPlaced[index][0], game_uuid))
+                mycursor.execute("UPDATE playerBalances SET balance=%s WHERE playeruuid=%s AND gameuuid=%s", (playersBetsPlaced[index][2] - playersBetsPlaced[index][-2], playersBetsPlaced[index][0], game_uuid))
                 mydb.commit()
                 winning_uuids.append(playersBetsPlaced[index][0])
 
                 # Set Loser
-                mycursor.execute("UPDATE playerbalances SET balance=%s, is_active=%s WHERE playeruuid=%s AND gameuuid=%s", (playersBetsPlaced[index+1][2] - playersBetsPlaced[index+1][-2], False, playersBetsPlaced[index+1][0], game_uuid))
+                mycursor.execute("UPDATE playerBalances SET balance=%s, is_active=%s WHERE playeruuid=%s AND gameuuid=%s", (playersBetsPlaced[index+1][2] - playersBetsPlaced[index+1][-2], False, playersBetsPlaced[index+1][0], game_uuid))
                 mydb.commit()
                 losing_uuids.append(playersBetsPlaced[index+1][0])
 
@@ -404,12 +404,12 @@ def place_bets(data):
                     skipper_uuid = playersBetsPlaced[index][0]
             else:
                 # Set Winner
-                mycursor.execute("UPDATE playerbalances SET balance=%s WHERE playeruuid=%s AND gameuuid=%s", (playersBetsPlaced[index+1][2] - playersBetsPlaced[index+1][-2], playersBetsPlaced[index+1][0], game_uuid))
+                mycursor.execute("UPDATE playerBalances SET balance=%s WHERE playeruuid=%s AND gameuuid=%s", (playersBetsPlaced[index+1][2] - playersBetsPlaced[index+1][-2], playersBetsPlaced[index+1][0], game_uuid))
                 mydb.commit()
                 winning_uuids.append(playersBetsPlaced[index+1][0])
 
                 # Set Loser
-                mycursor.execute("UPDATE playerbalances SET balance=%s, is_active=%s WHERE playeruuid=%s AND gameuuid=%s", (playersBetsPlaced[index][2] - playersBetsPlaced[index][-2], False, playersBetsPlaced[index][0], game_uuid))
+                mycursor.execute("UPDATE playerBalances SET balance=%s, is_active=%s WHERE playeruuid=%s AND gameuuid=%s", (playersBetsPlaced[index][2] - playersBetsPlaced[index][-2], False, playersBetsPlaced[index][0], game_uuid))
                 mydb.commit()
                 losing_uuids.append(playersBetsPlaced[index][0])
 
@@ -419,18 +419,18 @@ def place_bets(data):
                     skipper_uuid = playersBetsPlaced[index+1][0]
         
         # Update current round skipper to not skip the next round if there exists such a player
-        mycursor.execute("SELECT * FROM playerbalances WHERE gameuuid = %s AND is_active = %s AND skip_round = %s;", (game_uuid, True, True))
+        mycursor.execute("SELECT * FROM playerBalances WHERE gameuuid = %s AND is_active = %s AND skip_round = %s;", (game_uuid, True, True))
         skippedPlayer = mycursor.fetchall()
         if len(skippedPlayer):
             skippedPlayer = skippedPlayer[0]
-            mycursor.execute("UPDATE playerbalances SET skip_round=%s WHERE playeruuid=%s AND gameuuid=%s", (False, skippedPlayer[0], game_uuid))
+            mycursor.execute("UPDATE playerBalances SET skip_round=%s WHERE playeruuid=%s AND gameuuid=%s", (False, skippedPlayer[0], game_uuid))
             mydb.commit()
         else:
             skippedPlayer = None
 
         # Update current round's max bet player to skip the next round only if number of players is greater than 2
         if totalPlayersCount > 2:
-            mycursor.execute("UPDATE playerbalances SET skip_round=%s WHERE playeruuid=%s AND gameuuid=%s", (True, skipper_uuid, game_uuid))
+            mycursor.execute("UPDATE playerBalances SET skip_round=%s WHERE playeruuid=%s AND gameuuid=%s", (True, skipper_uuid, game_uuid))
             mydb.commit()
             winning_uuids.remove(skipper_uuid)
         # if skippedPlayer is not None:
@@ -509,7 +509,7 @@ def place_bets(data):
                 emit('skipping-round', response_data, to=user_game_sid_map[(game_uuid, skipper_uuid)])
         
         # Reset has_bet field in DB to allow betting in the next round
-        mycursor.execute("UPDATE playerbalances SET has_bet=%s WHERE gameuuid=%s", (False, game_uuid))
+        mycursor.execute("UPDATE playerBalances SET has_bet=%s WHERE gameuuid=%s", (False, game_uuid))
         mydb.commit()
 
 
