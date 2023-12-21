@@ -35,8 +35,8 @@ mydb = mysql.connector.connect(
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
-socketio = SocketIO(app, cors_allowed_origins="*")
 app.config['CORS_HEADERS'] = 'Content-Type'
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # route_users = {}
 # game_bets = {}
